@@ -1,0 +1,28 @@
+<!-- Modal -->
+<div class="modal fade" id="invalidationModal" tabindex="-1" aria-labelledby="ivalidationModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h1 class="modal-title fs-5" id="invalidationModalLabel">Delete dataset</h1>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+              You are about to delete the dataset {{ uuid }}.
+              <form method="post" id="invalidation-form" action="{% url 'scidatacontainer_db:ui-delete' uuid %}">
+                {% csrf_token %}
+                <input type="hidden" name="_method" value="patch">
+                <label for="invalidationReasonTextarea">Deletion reason:</label>
+                <textarea class="form-control" id="invalidationReasonTextarea" rows=10 name="reason"></textarea>
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" name="confirm" value="" id="confirmCheckbox">
+                  <label class="form-check-label" for="confirmCheckbox">Yes i want to delete this dataset!</label>
+                </div>
+              </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="submit" form="invalidation-form" class="btn btn-danger">Delete</button>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,59 @@
+{% extends "scidatacontainer_db/base.html" %}
+{% block css %}
+{% load static %}
+<link rel="stylesheet" href="{% static 'scidatacontainer_db/css/drag-drop.css' %}">
+{% endblock %}
+
+{% block js %}
+{% load static %}
+<script src="{% static 'scidatacontainer_db/js/drag-drop.js' %}" defer data-token="{{ csrf_token }}"></script>
+{% endblock %}
+
+{% block content %}
+<form method="post" enctype="multipart/form-data" action="{% url 'scidatacontainer_db:ui-fileupload' %}" name="uploadform">
+    <div style="text-align: center;">
+        <div class="drag-area">
+            <div class="icon"><i class="fas fa-cloud-upload-alt"></i></div>
+                {% csrf_token %}
+                <header>Drag & Drop to Upload File</header>
+                <span>OR</span>
+                <input type="file" id="uploadinput">
+            </div>
+        </div>
+    </div>
+</form>
+<div class="container">
+<hr>
+    <table class="table table-hover">
+            <thead>
+                    <tr>
+                            <th scope="col">Title</th>
+                            <th scope="col">Container Type</th>
+                            <th scope="col">Author</th>
+                            <th scope="col">Upload</th>
+                            <th scope="col">Creation date</th>
+                            <th scope="col">UUID</th>
+    
+                    </tr>
+            </thead>
+
+            {% if page_obj %}
+            <tbody>
+                {% for dataset in page_obj %}
+                <tr onclick="window.location='{% url "scidatacontainer_db:ui-detail" dataset.id %}';">
+                        <td>{{ dataset.title }}</td>
+                        <td>{{ dataset.container_type }}</td>
+                        <td>{{ dataset.author }}</td>
+                        <td>{{ dataset.upload_time }}</td>
+                        <td>{{ dataset.created }}</td>
+                        <td>{{ dataset.id }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            {% endif %}
+    </table>
+    {% if page_obj.paginator.num_pages > 1 %}
+        {% include "scidatacontainer_db/pagination.html" %}
+    {% endif %}
+</div>
+{% endblock %}

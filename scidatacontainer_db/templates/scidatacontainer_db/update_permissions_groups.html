@@ -1,0 +1,51 @@
+<table>
+    <thead>
+    <tr>
+        <th scope="col"></th>
+        <th scope="col"></th>
+        <th scope="col"></th>
+        <th scope="col"></th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for group in rw_groups %}
+        <tr>
+            <td>
+                <input class="form-control" type="text" value="{{ group.name }}" disabled readonly>
+            </td>
+            <td>
+                <input type="radio" class="btn-check" name="grw_{{ group.name }}" value="ro" id="group_{{ group.name }}_read-outlined" autocomplete="off" {% if group not in w_groups %}checked{% endif %}>
+                <label class="btn btn-outline-primary" for="group_{{ group.name }}_read-outlined">Read only</label>
+            </td>
+            <td>
+                <input type="radio" class="btn-check" name="grw_{{ group.name }}" value="rw" id="group_{{ group.name }}_write-outlined" autocomplete="off" {% if group in w_groups %}checked{% endif %}>
+                <label class="btn btn-outline-primary" for="group_{{ group.name }}_write-outlined">Read & Write</label>
+            </td>
+            <td>
+                    <button type="submit" class="btn-close" name="delete-group" value="{{ group.name }}"></button>
+            </td>
+        </tr>
+        {% endfor %}
+        <input type="submit" style="display: none">
+        <tr>
+            <td>
+                <input class="form-control" list="GroupListOptions" id="GroupList" name="newgroup" placeholder="Groupname...">
+                <datalist id="GroupListOptions">
+                    {% for group in groups %}
+                    <option value="{{ group.name }}">
+                    {% endfor %}
+                </datalist>
+            </td>
+            <td>
+                <input type="radio" class="btn-check" name="newgroup_rw-outlined" value="ro" id="newgroup_read-outlined" autocomplete="off" checked>
+                <label class="btn btn-outline-primary" for="newgroup_read-outlined">Read only</label>
+            </td>
+            <td>
+                <input type="radio" class="btn-check" name="newgroup_rw-outlined" value="rw" id="newgroup_write-outlined" autocomplete="off">
+                <label class="btn btn-outline-primary" for="newgroup_write-outlined">Read & Write</label>
+            </td>
+            <td>
+            </td>
+        </tr>
+    </tbody>
+</table>

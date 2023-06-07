@@ -1,0 +1,189 @@
+{% extends "scidatacontainer_db/base.html" %}
+{% block content %}
+
+{% include "scidatacontainer_db/invalidation_modal.html" with uuid=dataset.id %}
+<h2>Dataset: {{ dataset.title }}</h2>
+<div class="btn-group" role="group" aria-label="Basic mixed styles example">
+        <a class="btn btn-primary" href="{% url 'scidatacontainer_db:ui-filedownload' dataset.id %}">Download</a>
+    {% if dataset.owner == request.user %}
+    <a class="btn btn-primary" href="{% url 'scidatacontainer_db:ui-permission_update' dataset.id %}">Manage permissions</a>
+    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#invalidationModal">Delete</button>
+    {% endif %}
+</div>
+
+<table class="table table-hover">
+    <tr>
+        <td>UUID</td>
+        <td>{{ dataset.id }}</td>
+    </tr>
+    <tr>
+        <td>Size</td>
+        <td>{{ dataset.size|filesizeformat }}</td>
+    </tr>
+    <tr>
+        <td>Uploaded:</td>
+        <td>{{ dataset.upload_time }}</td>
+    </tr>
+    {% if dataset.replaces.all %}
+    <tr>
+        <td>Replaces:</td>
+        <td>{% for d in dataset.replaces.all %}<a href="{% url 'ui-detail' d %}">{{ d.id }}</a>{% endfor %}</td>
+    </tr>
+    {% endif %}
+    <tr>
+        <td>Complete:</td>
+        <td>{% if dataset.complete %}&#9745{% else %}&#9744{% endif %}</td>
+    </tr>
+    <tr>
+        <td>Owner:</td>
+        <td>{{ dataset.owner }}</td>
+    </tr>
+    <tr>
+        {% with ur=dataset.list_read_perm_users gr=dataset.list_read_perm_groups uw=dataset.list_write_perm_users gw=dataset.list_write_perm_groups %}
+        <td>User Permissions:</td>
+        <td>
+            {% for user in ur%}
+            {{ user.username }} (r)<br>
+            {% endfor %}
+            {% for user in uw%}
+            {{ user.username }} (w)<br>
+            {% endfor %}
+        </td>
+    <tr>
+    </tr>
+        <td>Group Permissions:</td>
+        <td>
+            {% for group in gr%}
+            {{ group }} (r)<br>
+            {% endfor %}
+            {% for group in gw%}
+            {{ group }} (w)<br>
+            {% endfor %}
+        </td>
+        {% endwith %}
+    </tr>
+    <tr>
+            <th>meta.json</th>
+            <th></th>
+    </tr>
+    <tr>
+        <td>Title</td>
+        <td>{{ dataset.title }}</td>
+    </tr>
+    {% if dataset.timestamp %}
+    <tr>
+        <td>Content Timestamp</td>
+        <td>{{ dataset.timestamp }}</td>
+    </tr>
+    {% endif %}
+    {% if dataset.doi %}
+    <tr>
+        <td>DOI</td>
+        <td>{{ dataset.doi }}</td>
+    </tr>
+    {% endif %}
+    <tr>
+        <td>Author</td>
+        <td>{{ dataset.author }}</td>
+    </tr>
+    {% if dataset.organization %}
+    <tr>
+        <td>Organization</td>
+        <td>{{ dataset.organization }}</td>
+    </tr>
+    {% endif %}
+    <tr>
+        <td>Email</td>
+        <td>{{ dataset.email }}</td>
+    </tr>
+    {% if dataset.comment %}
+    <tr>
+        <td>Comment</td>
+        <td>{{ dataset.comment }}</td>
+    </tr>
+    {% endif %}
+    {% if dataset.description %}
+    <tr>
+        <td>Description</td>
+        <td>{{ dataset.description }}</td>
+    </tr>
+    {% endif %}
+    {% if dataset.license %}
+    <tr>
+        <td>License</td>
+        <td>{{ dataset.License }}</td>
+    </tr>
+    {% endif %}
+    <tr>
+            <th>content.json</th>
+            <th></th>
+    </tr>
+    <tr>
+        <td>Container Created</td>
+        <td>{{ dataset.created }}</td>
+    </tr>
+    <tr>
+        <td>Container Modified</td>
+        <td>{{ dataset.modified }}</td>
+    </tr>
+    <tr>
+        <td>Static</td>
+        <td>{% if dataset.static %}&#9745{% else %}&#9744{% endif %}</td>
+    </tr>
+    <tr>
+            <td>Model Version</td>
+            <td>{{ dataset.model_version }}</td>
+    </tr>
+    <tr>
+        <td>Container Type</td>
+        <td>
+            <table>
+                <tbody>
+                    <tr>
+                        <td>Name:</td>
+                        <td>{{ dataset.container_type.name }}</td>
+                    </tr>
+                    {% if container_type.version %}
+                    <tr>
+                        <td>Version:</td>
+                        <td>{{ dataset.container_type.version }}</td>
+                    </tr>
+                    {% endif %}
+                    {% if container_type.id %}
+                    <tr>
+                        <td>ID:</td>
+                        <td>{{ dataset.container_type.id }}</td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </td>
+    </tr>
+    {% if dataset.hash %}
+    <tr>
+        <td>Hash</td>
+        <td>{{ dataset.hash }}</td>
+    </tr>
+    {% endif %}
+    <tr>
+            <th>Other files</th>
+            <th></th>
+    </tr>
+    {% for file in dataset.content.all %}
+    <tr>
+        <th></th>
+        <th>{{ file.name }}</th>
+    </tr>
+    <tr>
+	    <td>Size:</td>
+	    <td>{{ file.size|filesizeformat }}</td>
+    </tr>
+    <tr>
+	    {% if file.content %}
+	    <td>Content: </td>
+	    <td><pre>{{ file.content|pprint }}</pre></td>
+	    {% endif %}
+    </tr>
+    {% endfor %}
+</table>
+{% endblock %}

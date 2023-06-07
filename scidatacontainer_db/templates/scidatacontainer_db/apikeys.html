@@ -1,0 +1,41 @@
+{% extends "scidatacontainer_db/base.html" %}
+
+{% block js %}
+    {% load static %}
+    <script src="{% static 'scidatacontainer_db/js/apikeys.js' %}" defer></script>
+{% endblock %}
+
+{% block content %}
+<table class="table table-hover">
+        <thead>
+                <tr>
+                        <th scope="col">Created:</th>
+                        <th scope="col">Expires:</th>
+                        <th scope="col">Starts with:</th>
+                        <th scope="col">Delete:</th>
+                </tr>
+        </thead>
+        {% if page_obj %}
+        <tbody>
+            {% for token in page_obj %}
+            <form method="post" action="{% url 'scidatacontainer_db:ui-keys' %}">
+            {% csrf_token %}
+            <tr>
+                <td>{{ token.created }}</td>
+                <td>{{ token.expiry }}</td>
+                <td>{{ token.token_key }}</td>
+                <td><button type="submit" name="delete" value="{{ token.digest }}" class="btn-close btn-close-white" aria-label="Close"></button></td>
+            </tr>
+            </form>
+            {% endfor %}
+        </tbody>
+        {% endif %}
+</table>
+{% if page_obj.paginator.num_pages > 1 %}
+    {% include "scidatacontainer_db/pagination.html" %}
+{% endif %}
+<form method="post" action="{% url 'scidatacontainer_db:ui-keys' %}">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-primary" name="create" value="True">New API Key</button>
+</form>
+{% endblock %}

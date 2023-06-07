@@ -1,0 +1,45 @@
+{% extends "scidatacontainer_db/base.html" %}
+
+{% block content %}
+<h2>Dataset: {{ dataset.title }}</h2>
+<form method="post">
+        {% csrf_token %}
+    <table class="table table-hover">
+        <tr>
+            <td>UUID</td>
+            <td>{{ dataset.id }}</td>
+        </tr>
+        <tr>
+            <td>Size</td>
+            <td>{{ dataset.size|filesizeformat }}</td>
+        </tr>
+        <tr>
+            <td>Owner:</td>
+            <td>
+                    <input class="form-control" list="OwnerListOptions" id="OwnerList" name="owner" placeholder="{{ dataset.owner }}">
+                <datalist id="OwnerListOptions">
+                {% for user in users %}
+                    <option value="{{ user.username }}" default>
+                {% endfor %}
+                </datalist>
+            </td>
+        </tr>
+        <tr>
+            <td>User Permissions:</td>
+            <td>
+                {% include "scidatacontainer_db/update_permissions_users.html" %}
+            </td>
+        </tr>
+        <tr>
+            <td>Group Permissions:</td>
+            <td>
+                {% include "scidatacontainer_db/update_permissions_groups.html" %}
+            </td>
+        </tr>
+    </table>
+    <div class="btn-group" role="group" aria-label="Basic mixed styles example">
+            <a type="button" class="btn btn-danger" href="{% url 'scidatacontainer_db:ui-detail' dataset.id %}">Back</a>
+        <button type="submit" class="btn btn-success">Confirm</button>
+    </div>
+</form>
+{% endblock %}

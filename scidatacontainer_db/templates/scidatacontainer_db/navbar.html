@@ -1,0 +1,8 @@
+<nav class="navbar navbar-dark bg-primary" aria-label="Dark offcanvas navbar">
+    <div class="container-fluid">
+            <a class="navbar-brand" href="{% url 'scidatacontainer_db:ui-index' %}"><h1>{% block title %}ZDC Database{% endblock %}</h1></a>
+            {% if user.is_authenticated %}
+            {% include "scidatacontainer_db/menu.html" %}
+            {% endif %}
+    </div>
+</nav>

@@ -1,0 +1,51 @@
+<table>
+    <thead>
+    <tr>
+        <th scope="col"></th>
+        <th scope="col"></th>
+        <th scope="col"></th>
+        <th scope="col"></th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for user in rw_users %}
+    <tr>
+        <td>
+                <input class="form-control" type="text" value="{{ user.username }}" disabled readonly>
+        </td>
+        <td>
+                <input type="radio" class="btn-check" name="urw_{{ user.id }}" value="ro" id="user_{{ user.id }}_read-outlined" autocomplete="off" {% if user not in w_users %}checked{% endif %}>
+            <label class="btn btn-outline-primary" for="user_{{ user.id }}_read-outlined">Read only</label>
+        </td>
+        <td>
+            <input type="radio" class="btn-check" name="urw_{{ user.id }}" value="rw" id="user_{{ user.id }}_write-outlined" autocomplete="off" {% if user in w_users %}checked{% endif %}>
+            <label class="btn btn-outline-primary" for="user_{{ user.id }}_write-outlined">Read & Write</label>
+        </td>
+        <td>
+                <button type="submit" class="btn-close delete" name="delete-user" value="{{ user.id }}"></button>
+        </td>
+    </tr>
+    {% endfor %}
+    <input type="submit" style="display: none">
+    <tr>
+        <td>
+            <input class="form-control" list="UserListOptions" id="UserList" name="newuser" placeholder="Username...">
+            <datalist id="UserListOptions">
+                {% for user in users %}
+                <option value="{{ user.username }}">
+                {% endfor %}
+            </datalist>
+        </td>
+        <td>
+            <input type="radio" class="btn-check" name="newuser_rw-outlined" value="ro" id="newuser_read-outlined" autocomplete="off" checked>
+            <label class="btn btn-outline-primary" for="newuser_read-outlined">Read only</label>
+        </td>
+        <td>
+            <input type="radio" class="btn-check" name="newuser_rw-outlined" value="rw" id="newuser_write-outlined" autocomplete="off">
+            <label class="btn btn-outline-primary" for="newuser_write-outlined">Read & Write</label>
+        </td>
+        <td>
+        </td>
+    </tr>
+    </tbody>
+</table>

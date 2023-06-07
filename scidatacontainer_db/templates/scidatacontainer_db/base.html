@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en-US">
+    <head>
+        {% block title %} <title>ZDC Data Sets</title>{% endblock %}
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        {% load static %}
+        <link rel="stylesheet" href="{% static 'scidatacontainer_db/css/bootstrap.css' %}">
+        <script src="{% static 'scidatacontainer_db/js/popper.min.js' %}"></script>
+        <script src="{% static 'scidatacontainer_db/js/bootstrap.js' %}"></script>
+        <script src="{% static 'scidatacontainer_db/js/jquery.min.js' %}"></script>
+
+        {% block css %}
+        {% endblock %}
+        {% block js %}
+        {% endblock %}
+    </head>
+    <body>
+            {% include "scidatacontainer_db/navbar.html" %}
+            <div class="container">
+                <hr>
+                {% include "scidatacontainer_db/messages.html" %}
+                {% block content %}{% endblock %}
+            </div>
+    </body>
+</html>
