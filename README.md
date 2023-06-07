@@ -10,13 +10,9 @@ ToDo
 
 Install using pip:
 
-.. code-block:: sh
-
     pip install django-scidatacontainer
 
 Then add ``'scidatacontainer_db'`` and all third party libraries to your ``INSTALLED_APPS``.
-
-.. code-block:: python
 
     INSTALLED_APPS = [
         ...,
@@ -30,9 +26,9 @@ Then add ``'scidatacontainer_db'`` and all third party libraries to your ``INSTA
 Finally, configure it in your ``settings.py``.
 - Define ``MEDIA_ROOT``. It is the location where the dataset files are stored.
 - Define `` LOGIN_URL`` and ``LOGOUT_REDIRECT_URL``. This packages provides a login page that can be used.
-- Configure the required third party packages. A good starting point might be the following configuration.
+- Configure the required third party packages.
 
-.. code-block:: python
+A good starting point might be the following configuration:
 
     AUTHENTICATION_BACKENDS = (
         'django.contrib.auth.backends.ModelBackend',
