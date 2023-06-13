@@ -1,10 +1,12 @@
 # SciDataContainer Django Server
 
+[![Documentation Status](https://readthedocs.org/projects/django-scidatacontainer/badge/?version=latest)](https://django-scidatacontainer.readthedocs.io/en/latest/?badge=latest)
+
 This is the django based implementation of the server to manage [`SciDataContainer`](https://pypi.org/project/scidatacontainer/) objects.
 
 ## Documentation
 
-ToDo
+The [`documentation`](https://django-scidatacontainer.readthedocs.io/en/latest/) is hosted on [`Read the Docs`](https://readthedocs.org/).
 
 ## Installation
 
