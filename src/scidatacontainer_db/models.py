@@ -246,8 +246,8 @@ class DataSet(DataSetBase):
     # content.json
     created = models.DateTimeField(help_text="Creation timestamp of the " +
                                              "container")
-    modified = models.DateTimeField(help_text="Last modification timestamp " +
-                                              " of the container")
+    storage_time = models.DateTimeField(help_text="Timestamp of storage" +
+                                                  " of the container")
     static = models.BooleanField(default=False,
                                  help_text="Flag for static containers")
     container_type = models.ForeignKey(ContainerType,
@@ -358,8 +358,8 @@ class DataSet(DataSetBase):
                                               ".",
                                        "object": obj})
 
-        if self.modified:
-            if self.modified > d["modified"]:
+        if self.storage_time:
+            if self.storage_time > d["storage_time"]:
                 raise MetaDBError({"error_code": 400,
                                    "msg": "Server version of the dataset is" +
                                           " newer than the file you tried " +

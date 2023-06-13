@@ -40,7 +40,7 @@ class DataSetFilter(FilterSet):
                  "description": charfield_filters,
                  "email": charfield_filters,
                  "created": datefield_filter,
-                 "modified": datefield_filter,
+                 "storage_time": datefield_filter,
                  # "container_type": charfield_filters,
                  }
 

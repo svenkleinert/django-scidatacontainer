@@ -10,7 +10,7 @@ from scidatacontainer_db.models import ContainerType, DataSet, Keyword,\
 
 class DataSetTest(TestCase):
 
-    def test_version_0_3(self):
+    def test_version_1_0_0(self):
         testuser = User.objects.create_user("Testuser")
         dc = DataSet()
         dc.owner = testuser
@@ -23,7 +23,7 @@ class DataSetTest(TestCase):
         d["size"] = 200
 
         d["created"] = now
-        d["modified"] = now
+        d["storage_time"] = now
         d["static"] = False
         ct = ContainerType(name="TestType2", id="TestID", version="1.0")
         ct.save()
@@ -34,7 +34,7 @@ class DataSetTest(TestCase):
         s2 = Software(name="TestSoftware2", version="2.0")
         s2.save()
         d["used_software"] = [s1, s2]
-        d["model_version"] = "0.3"
+        d["model_version"] = "1.0.0"
 
         d["author"] = "Max Mustermann"
         d["email"] = "max.mustermann@phoenixd.uni-hannover.de"
@@ -48,6 +48,9 @@ class DataSetTest(TestCase):
         d["description"] = "TestDescription"
 
         d["content"] = []
+        d["doi"] = "testdoi"
+        d["license"] = "MIT"
+        d["model_version"] = "0.5"
 
         dc.update_attributes(d, testuser)
         dc.save()
@@ -62,24 +65,3 @@ class DataSetTest(TestCase):
                 self.assertEqual(getattr(dc, key), value)
 
         return dc, d
-
-    def test_version_0_5(self):
-        dc, d = self.test_version_0_3()
-
-        d["timestamp"] = datetime.now().replace(tzinfo=timezone.utc)
-        d["doi"] = "testdoi"
-        d["license"] = "MIT"
-        d["model_version"] = "0.5"
-
-        dc2 = DataSet(id=uuid.uuid4(), owner=dc.owner)
-        dc2.update_attributes(d, dc.owner)
-        dc2.save()
-
-        for key, value in d.items():
-            fieldtype = DataSet._meta.get_field(key).get_internal_type()
-
-            if fieldtype == "ManyToManyField":
-                for item in getattr(dc2, key).all():
-                    self.assertIn(item, value)
-            else:
-                self.assertEqual(getattr(dc2, key), value)

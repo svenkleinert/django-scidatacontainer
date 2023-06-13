@@ -72,7 +72,7 @@ class DataSetSerializer(serializers.ModelSerializer):
     class Meta:
         model = DataSet
         fields = ["id", "upload_time", "replaces", "complete",
-                  "valid", "size", "created", "modified", "static",
+                  "valid", "size", "created", "storage_time", "static",
                   "container_type", "hash", "used_software", "model_version",
                   "author", "email", "comment", "title", "keywords",
                   "description", "content"]

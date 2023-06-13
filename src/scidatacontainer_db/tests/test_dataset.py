@@ -25,7 +25,7 @@ class DataSetTest(TestCase):
                     valid=True,
                     size=20000,
                     created=now,
-                    modified=now,
+                    storage_time=now,
                     static=False,
                     owner=testuser,
                     container_type=container_type,
@@ -38,7 +38,7 @@ class DataSetTest(TestCase):
         self.assertEqual(d.valid, True)
         self.assertEqual(d.size, 20000)
         self.assertEqual(d.created, now)
-        self.assertEqual(d.modified, now)
+        self.assertEqual(d.storage_time, now)
         self.assertEqual(d.static, False)
         self.assertEqual(d.owner, testuser)
         self.assertEqual(d.container_type.name, container_type.name)
@@ -57,7 +57,7 @@ class DataSetTest(TestCase):
         d["size"] = 200
 
         d["created"] = now
-        d["modified"] = now
+        d["storage_time"] = now
         d["static"] = False
         ct = ContainerType(name="TestType2", id="TestID", version="1.0")
         ct.save()
@@ -68,7 +68,7 @@ class DataSetTest(TestCase):
         s2 = Software(name="TestSoftware2", version="2.0")
         s2.save()
         d["used_software"] = [s1, s2]
-        d["model_version"] = "0.3"
+        d["model_version"] = "1.0.0"
 
         d["author"] = "Max Mustermann"
         d["email"] = "max.mustermann@phoenixd.uni-hannover.de"
@@ -136,7 +136,7 @@ class DataSetTest(TestCase):
             dc.update_attributes(d, dc.owner)
 
         d["static"] = False
-        d["modified"] = d["modified"] - timedelta(seconds=1)
+        d["storage_time"] -= timedelta(seconds=1)
 
         with self.assertRaisesMessage(MetaDBError,
                                       "{'error_code': 400, 'msg': 'Server " +
@@ -144,7 +144,7 @@ class DataSetTest(TestCase):
                                       "the file you tried to upload.'}"):
             dc.update_attributes(d, dc.owner)
 
-        d["modified"] = d["modified"] + timedelta(seconds=2)
+        d["storage_time"] = d["storage_time"] + timedelta(seconds=2)
 
         dc2 = DataSet()
         dc2.owner = dc.owner
@@ -190,8 +190,8 @@ class DataSetTest(TestCase):
         self.assertEqual(obj.created, timestamp)
         self.assertEqual(obj.hash, "389c050aadb9ea13c488975c035f06ae3b46c92" +
                                    "b89e69d09a3414958f7521ff9")
-        self.assertEqual(obj.model_version, "0.3.1")
-        self.assertEqual(obj.modified, timestamp)
+        self.assertEqual(obj.model_version, "1.0.0")
+        self.assertEqual(obj.storage_time, timestamp)
         self.assertEqual(obj.replaces, None)
         self.assertEqual(obj.static, False)
         self.assertEqual(len(obj.used_software.all()), 2)
@@ -210,7 +210,7 @@ class DataSetTest(TestCase):
         obj = parse_container_file(file, testuser)
         obj.save()
         self.assertEqual(obj.container_type.name, "myImage2")
-        self.assertEqual(obj.modified, timestamp + timedelta(seconds=6))
+        self.assertEqual(obj.storage_time, timestamp + timedelta(seconds=6))
         lib1 = obj.used_software.get(name="TestLibrary")
         lib2 = obj.used_software.get(name="TestLib2")
         self.assertEqual(lib1.version, "0.2")
@@ -259,7 +259,7 @@ class DataSetTest(TestCase):
                                       " to upload a dataset complying " +
                                       "scidatacontainer model version 0.2.19" +
                                       " but the server requires a minimum " +
-                                      "model version of 0.3'}"):
+                                      "model version of 1.0.0'}"):
             obj = parse_container_file(file, testuser)
 
     def test_dataset_parse_hdf5_file(self):

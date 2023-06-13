@@ -91,13 +91,13 @@ def _keyword_parser(keywords: List[str]) -> List[Keyword]:
     return [Keyword.objects.get_or_create(name=entry)[0] for entry in keywords]
 
 
-_constraints_0_3 = {
+_constraints_1_0_0 = {
                     "content": {
                                 "uuid": (str, True),
                                 "replaces": (_replaces_parser, False),
                                 "containerType": (_containerType_parser, True),
                                 "created": (_datetime_parser, True),
-                                "modified": (_datetime_parser, True),
+                                "storageTime": (_datetime_parser, True),
                                 "static": (bool, True),
                                 "complete": (bool, True),
                                 "hash": (str, False),
@@ -111,19 +111,14 @@ _constraints_0_3 = {
                              "title": (str, True),
                              "keywords": (_keyword_parser, False),
                              "description": (str, False),
+                             "timestamp": (str, False),
+                             "doi": (str, False),
+                             "license": (str, False),
                              }
                     }
 
-_constraints_0_5_1 = _constraints_0_3.copy()
-_constraints_0_5_1["meta"].update({
-                                   "timestamp": (str, False),
-                                   "doi": (str, False),
-                                   "license": (str, False),
-                                   })
-
 _constraints = {
-                "0.3": _constraints_0_3,
-                "0.5.1": _constraints_0_5_1
+                "1.0.0": _constraints_1_0_0,
                 }
 
 MIN_SUPPORTED_VERSION = min([version.parse(k) for k in _constraints.keys()])
@@ -159,7 +154,7 @@ class BaseParser(ABC):
                                       "model version of " +
                                       str(MIN_SUPPORTED_VERSION)
                                })
-        key = (max([k for k in _constraints.keys() if version.parse(k) < v]))
+        key = (max([k for k in _constraints.keys() if version.parse(k) <= v]))
         return _constraints[key]
 
     @abstractmethod

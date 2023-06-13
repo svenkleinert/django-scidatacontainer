@@ -8,7 +8,7 @@ have a `Django project <https://docs.djangoproject.com/en/4.2/intro/tutorial01/>
 Then download the source code or the installation file inside the `dist` folder of the github repository.
 You can install it via::
 
-    >>> pip install django-scidatacontainer-<version>.tar.gz
+    >>> pip install django-scidatacontainer
 
 Afterwards add this app and all other requirements to your `INSTALLED_APPS` in your `<project-name>/settings.py`::
 
