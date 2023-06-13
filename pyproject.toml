@@ -4,7 +4,7 @@ build-backend = 'setuptools.build_meta'
 
 [project]
 name = "django-scidatacontainer"
-version = "0.2"
+version = "0.2.1"
 authors = [
            {name="Sven Kleinert", email="sven.kleinert@phoenixd.uni-hannover.de"}
            ]

@@ -1,5 +1,5 @@
 include LICENSE
 include README.rst
-recursive-include scidatacontainer_db/static *
-recursive-include scidatacontainer_db/templates *
-recursive-include scidatacontainer_db/tests *
+recursive-include src/scidatacontainer_db/static *
+recursive-include src/scidatacontainer_db/templates *
+recursive-include src/scidatacontainer_db/tests *
