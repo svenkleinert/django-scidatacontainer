@@ -9,16 +9,21 @@ import datetime
 import json
 import os.path
 import re
-import zipfile
-import magic
 from typing import List
+from uuid import uuid4
+import zipfile
 
+import magic
 from packaging import version
+import iso8601
 
 from .utils import MetaDBError
 from .models import ContainerType, DataSet, DataSetBase, File, Keyword,\
                     Software
-from .test_utils import parse_test_data
+from .serializers import DataSetSerializer
+
+from scidatacontainer.jsonschema import validate, meta, content
+from jsonschema.exceptions import ValidationError as jsonschemaValidationError
 
 
 def _datetime_parser(datetime_str: str) -> datetime.datetime:
@@ -29,18 +34,7 @@ def _datetime_parser(datetime_str: str) -> datetime.datetime:
 
     :return: Timestamp as datetime.datetime object.
     """
-    try:
-        dt = datetime.datetime.fromisoformat(datetime_str)
-        return dt
-    except ValueError:
-        try:
-            dt = datetime.datetime.strptime(datetime_str,
-                                            "%Y-%m-%dT%H:%M:%S+%z")
-            return dt.replace(tzinfo=datetime.timezone.utc)
-        except ValueError:
-            dt = datetime.datetime.strptime(datetime_str,
-                                            "%Y-%m-%d %H:%M:%S %Z")
-            return dt.replace(tzinfo=datetime.timezone.utc)
+    return iso8601.parse_date(datetime_str)
 
 
 def _used_software_parser(used_software_list: List[dict]) -> List[Software]:
@@ -91,38 +85,46 @@ def _keyword_parser(keywords: List[str]) -> List[Keyword]:
     return [Keyword.objects.get_or_create(name=entry)[0] for entry in keywords]
 
 
-_constraints_1_0_0 = {
-                    "content": {
-                                "uuid": (str, True),
-                                "replaces": (_replaces_parser, False),
-                                "containerType": (_containerType_parser, True),
-                                "created": (_datetime_parser, True),
-                                "storageTime": (_datetime_parser, True),
-                                "static": (bool, True),
-                                "complete": (bool, True),
-                                "hash": (str, False),
-                                "usedSoftware": (_used_software_parser, False),
-                                "modelVersion": (str, True)
-                                },
-                    "meta": {
-                             "author": (str, True),
-                             "email": (str, True),
-                             "comment": (str, False),
-                             "title": (str, True),
-                             "keywords": (_keyword_parser, False),
-                             "description": (str, False),
-                             "timestamp": (str, False),
-                             "doi": (str, False),
-                             "license": (str, False),
-                             }
-                    }
+def parsers_from_jsonschema(schema):
+    properties = {}
+    if "properties" in schema:
+        for _name, _dict in schema["properties"].items():
+            if _name == "replaces":
+                properties[_name] = _replaces_parser
+                continue
+            if "type" not in _dict:
+                continue
 
-_constraints = {
-                "1.0.0": _constraints_1_0_0,
-                }
+            if _dict["type"] == "string":
+                if _dict.get("format", None) == "date-time":
+                    properties[_name] = _datetime_parser
+                else:
+                    properties[_name] = str
+            elif _dict["type"] == "array":
+                if _name == "usedSoftware":
+                    properties[_name] = _used_software_parser
+                elif _name == "keywords":
+                    properties[_name] = _keyword_parser
+                else:
+                    raise MetaDBError({"error_code": 500,
+                                       "msg": "The model version has a " +
+                                       "property '" + _name + "' that is " +
+                                       "not supported."
+                                       })
+            elif _dict["type"] == "object":
+                if _name == "containerType":
+                    properties[_name] = _containerType_parser
+                else:
+                    raise MetaDBError({"error_code": 500,
+                                       "msg": "The model version has a " +
+                                       "property '" + _name + "' that is "
+                                       "not supported."
+                                       })
+            else:
+                properties[_name] = lambda x: x
+    return properties
 
-MIN_SUPPORTED_VERSION = min([version.parse(k) for k in _constraints.keys()])
-
+MIN_SUPPORTED_VERSION = min([version.parse(k) for k in content.keys()])
 
 class BaseParser(ABC):
     """
@@ -132,17 +134,15 @@ class BaseParser(ABC):
     def __init__(self):
         self.model_version = None
 
-    @property
-    def _constraints(self) -> dict:
+    def _ensure_version_is_supported(self):
         """
-        Return a dict containing (parser, required) pairs of the single files.
+        Raise a MetaDBException if the model version is not supported.
 
         :raises scidatacontainer_db.MetaDBError: If the model version is not
         supported.
-
-        :return: constraints dictionary.
         """
-        if not self.model_version:
+        if not self.model_version:  # pragma: no cover
+            # Fallback. Usually the model version is already available
             self._read_model_version()
         v = version.parse(self.model_version)
         if v < MIN_SUPPORTED_VERSION:
@@ -154,8 +154,31 @@ class BaseParser(ABC):
                                       "model version of " +
                                       str(MIN_SUPPORTED_VERSION)
                                })
-        key = (max([k for k in _constraints.keys() if version.parse(k) <= v]))
-        return _constraints[key]
+
+    @property
+    def schema(self) -> dict:
+        """
+        Return a dict containing the json schemas for validation of the meta
+        data.
+
+        :return: schema dictionary.
+        """
+        self._ensure_version_is_supported()
+
+        v = version.parse(self.model_version)
+        c_key = (max([k for k in content.keys() if version.parse(k) <= v]))
+        m_key = (max([k for k in meta.keys() if version.parse(k) <= v]))
+
+        return {"meta": meta[m_key], "content": content[c_key]}
+
+    @property
+    def parsers(self) -> dict:
+        """
+        Return a dict containing the parsers the meta data.
+
+        :return: parser dictionary.
+        """
+        return {k: parsers_from_jsonschema(v) for k, v in self.schema.items()}
 
     @abstractmethod
     def _read_content_json(self):  # pragma: no cover
@@ -211,30 +234,76 @@ class BaseParser(ABC):
 
         :returns: Dictionary of validated and parsed values.
         """
-        c = self._constraints[filename]
+
+        if not self.model_version:
+            self._read_model_version()
+
+        schema = self.schema[filename]
+
+        try:
+            validate(instance=in_dict,
+                     check_format=True,
+                     translate=True,
+                     schema_name=filename,
+                     schema=schema,
+                     )
+
+        except jsonschemaValidationError as e:
+            raise MetaDBError({"error_code": 400,
+                               "msg": e.message})
+
+        parsers = self.parsers[filename]
+
         d = {}
-        for key, (t, required) in c.items():
-            if required and key not in in_dict:
-                raise MetaDBError({"error_code": 400,
-                                   "msg": "Attribute '" + key +
-                                          "' required in " + filename +
-                                          ".json."
-                                   })
+        for key, parser in parsers.items():
             if key in in_dict:
-                if in_dict[key] and in_dict[key] != []:
-                    # convert CamelCase to snake_case (more pythonic).
-                    name = re.sub(r'(?<!^)(?=[A-Z])', '_', key).lower()
-                    try:
-                        # try parsing
-                        d[name] = t(in_dict[key])
-                    except ValueError:
-                        raise MetaDBError({"error_code": 400,
-                                           "msg": "Failed to convert '" +
-                                                  in_dict[key] + "' using " +
-                                                  "the default parser. Make " +
-                                                  "sure it has the right type."
-                                           })
+                name = re.sub(r'(?<!^)(?=[A-Z])', '_', key).lower()
+                try:
+                    # try parsing
+                    d[name] = parser(in_dict[key])
+                except ValueError: # pragma: no cover
+                    # This should never occur. It should already throw an error
+                    # during json schema validation!
+                    raise MetaDBError({"error_code": 400,
+                                       "msg": "Failed to convert '" +
+                                              in_dict[key] + "' using " +
+                                              "the default parser. Make " +
+                                              "sure it has the right type."
+                                       })
         return d
+
+    def _parse_test_data(self, uuid: str, metadata: dict, user: User):
+        """
+        Check the last characters of a test UUID and raise a corresponding
+        exception.
+    
+        :param uuid: UUID as str
+    
+        :raises scidatacontainer_db.MetaDBError: The exception matching the error
+        code of the last 3 characters of the UUID.
+        """
+        if uuid.endswith("409"):
+            raise MetaDBError({"error_code": 409,
+                               "msg": "Dataset is marked complete. " +
+                                      "No further changes allowed."})
+        if uuid.endswith("403"):
+            raise MetaDBError(
+                {"error_code": 403,
+                 "msg": "You don't have permission to update this dataset."})
+
+        if uuid.endswith("400"):
+            uuid = uuid4()
+            del metadata["uuid"]
+            obj = DataSet(id=uuid)
+            obj.owner = user
+            obj.complete = False
+            obj = obj.update_attributes(metadata, user)
+            raise MetaDBError({"error_code": 400,
+                               "msg": "Existing static dataset with same hash " +
+                                       "found.",
+                               "object": obj,
+                               "delete": True,
+                               "delete_replaced": True})
 
     def parse(self, filename: str, user: User) -> DataSet:
         """
@@ -256,7 +325,7 @@ class BaseParser(ABC):
 
         if uuid.startswith("00000000-0000-0000-0000-00000000"):
             # These UUIDs are reserved for testing.
-            return parse_test_data(uuid)
+            return self._parse_test_data(uuid, d, user)
 
         del d["uuid"]
         if len(DataSetBase.objects.filter(id=uuid)) != 0:
@@ -333,13 +402,19 @@ class Hdf5ContainerParser(BaseParser):
                            }
                           )
 
-    def _read_meta_json(self):
+    def _read_meta_json(self):  # pragma: no cover
         raise MetaDBError({"error_code": 501,
                            "msg": "The server does not support to parse hdf5" +
                                   " files yet."
                            }
                           )
 
+    def _read_filelist(self):  # pragma: no cover
+        raise MetaDBError({"error_code": 501,
+                           "msg": "The server does not support to parse hdf5" +
+                                  " files yet."
+                           }
+                          )
 
 def parse_container_file(filename, owner):
     """
@@ -361,7 +436,7 @@ def parse_container_file(filename, owner):
                 if not obj:
                     return
                 server_path = settings.MEDIA_ROOT + "/" + str(obj.id) + ".zdc"
-            elif filetype == "application/x-hdf":
+            elif filetype == "application/x-hdf5":
                 parser = Hdf5ContainerParser()
                 obj = parser.parse(filename, owner)
                 server_path = settings.MEDIA_ROOT + "/" + str(obj.id) + ".hdf5"
@@ -381,9 +456,11 @@ def parse_container_file(filename, owner):
     except MetaDBError:
         raise
     except IntegrityError as e:  # pragma: no cover
+        # Fallback. This error should be caught inside the model class.
         raise MetaDBError({"error_code": 400,
                            "msg": "IntegrityError: " + str(e)})
-    except ValidationError as e:
+    except ValidationError as e:  # pragma: no cover
+        # Fallback. This error should be caught inside the parser class.
         raise MetaDBError({"error_code": 400,
                            "msg": "ValidationError: " + str(e)})
     except Exception as e:  # pragma: no cover

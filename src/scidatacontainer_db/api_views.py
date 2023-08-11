@@ -15,7 +15,7 @@ from .models import ContainerType, DataSet, File, Keyword, Software
 from .parsers import parse_container_file
 from .utils import ensure_read_permission, ensure_owner, MetaDBError,\
                    APIResponse as Response
-from .test_utils import download_test_dataset, get_test_data
+from .test_utils import download_test_dataset, api_detail_test_data
 from . import serializers
 
 
@@ -67,13 +67,23 @@ class DataSetViewSet(ReadOnlyModelViewSet, mixins.CreateModelMixin):
                 if obj:
                     s = self.serializer_class(obj,
                                               context={'request': request})
-                    return Response(s.data,
-                                    status=e.args[0]["error_code"],
-                                    reason=e.args[0]["msg"])
+                    r = Response(s.data,
+                                 status=e.args[0]["error_code"],
+                                 reason=e.args[0]["msg"])
+
+                    if e.args[0].get("delete_replaced", False):
+                        if obj.replaces:
+                            obj.replaces.delete()
+
+                    if e.args[0].get("delete", False):
+                        obj.delete()
+
+                    return r
 
                 return Response(e.args[0]["msg"],
                                 status=e.args[0]["error_code"],
                                 reason=e.args[0]["msg"])
+
 
             return Response(status=201)
         return Response("", status=400,
@@ -184,7 +194,8 @@ class DataSetViewSet(ReadOnlyModelViewSet, mixins.CreateModelMixin):
             obj = DataSet.objects.get(id=pk)
         except DataSet.DoesNotExist:
             if pk.startswith("00000000-0000-0000-0000-00000000"):
-                obj = get_test_data(pk)
+                return api_detail_test_data(pk, request.user,
+                                            self.get_serializer)
             else:
                 return Response("", status=404,
                                 reason="No DataSet with UUID=" +

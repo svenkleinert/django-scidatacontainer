@@ -17,10 +17,11 @@ class LinkedContainerTypeSerializer(serializers.HyperlinkedModelSerializer):
 class LinkedDataSetSerializer(serializers.HyperlinkedModelSerializer):
     url = serializers.HyperlinkedIdentityField(
             view_name="scidatacontainer_db:api:dataset-detail")
+    uuid = serializers.UUIDField(source="id")
 
     class Meta:
         model = DataSetBase
-        fields = ["url", "id"]
+        fields = ["url", "uuid"]
 
 
 class LinkedFileSerializer(serializers.HyperlinkedModelSerializer):
@@ -44,13 +45,13 @@ class LinkedKeywordSerializer(serializers.HyperlinkedModelSerializer):
 
 
 class LinkedSoftwareSerializer(serializers.HyperlinkedModelSerializer):
-
     url = serializers.HyperlinkedIdentityField(
             view_name="scidatacontainer_db:api:software-detail")
+    idType = serializers.CharField(source="id_type")
 
     class Meta:
         model = Software
-        fields = ["url", "name", "version", "id", "id_type"]
+        fields = ["url", "name", "version", "id", "idType"]
 
 
 class ContainerTypeSerializer(serializers.ModelSerializer):
@@ -63,19 +64,25 @@ class ContainerTypeSerializer(serializers.ModelSerializer):
 
 
 class DataSetSerializer(serializers.ModelSerializer):
-    container_type = LinkedContainerTypeSerializer()
+    containerType = LinkedContainerTypeSerializer(source="container_type")
     content = LinkedFileSerializer(many=True, read_only=True)
     keywords = LinkedKeywordSerializer(many=True, read_only=True)
-    used_software = LinkedSoftwareSerializer(many=True, read_only=True)
+    usedSoftware = LinkedSoftwareSerializer(
+                                            many=True,
+                                            read_only=True,
+                                            source="used_software")
     replaces = LinkedDataSetSerializer(read_only=True)
+    uuid = serializers.UUIDField(source="id")
+    storageTime = serializers.DateTimeField(source="storage_time")
 
     class Meta:
         model = DataSet
-        fields = ["id", "upload_time", "replaces", "complete",
-                  "valid", "size", "created", "storage_time", "static",
-                  "container_type", "hash", "used_software", "model_version",
+        fields = ["uuid", "upload_time", "replaces", "complete",
+                  "valid", "size", "created", "storageTime", "static",
+                  "containerType", "hash", "usedSoftware", "model_version",
                   "author", "email", "comment", "title", "keywords",
-                  "description", "content"]
+                  "description", "organization", "doi", "license", "timestamp",
+                  "content"]
 
 
 class FileSerializer(serializers.ModelSerializer):

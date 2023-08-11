@@ -2,7 +2,6 @@ from django.test import TestCase
 from django.contrib.auth.models import User
 
 from datetime import datetime, timezone
-import uuid
 
 from scidatacontainer_db.models import ContainerType, DataSet, Keyword,\
                                        Software

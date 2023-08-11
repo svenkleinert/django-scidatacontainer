@@ -43,14 +43,12 @@ class SoftwareTest(TestCase):
             s = Software.to_Software({
                                       "name": "TestLibrary",
                                      })
-            s.save()
 
         with self.assertRaisesMessage(AssertionError, "usedSoftware requires" +
                                                       " name attribute."):
             s = Software.to_Software({
                                       "version": "1.0",
                                      })
-            s.save()
 
         with self.assertRaisesMessage(AssertionError,
                                       "usedSoftware requires" +
@@ -60,4 +58,3 @@ class SoftwareTest(TestCase):
                                       "version": "1.0",
                                       "id": "numpy",
                                      })
-            s.save()

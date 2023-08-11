@@ -1,16 +1,25 @@
-from django.test import TestCase
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.contrib.auth.models import User
 
-from datetime import datetime, timezone, timedelta
+from datetime import date, datetime, timezone, timedelta
 import mimetypes
+import io
 import uuid
 
 from scidatacontainer_db.models import ContainerType, DataSet, Keyword,\
                                        Software, DataSetBase
 from scidatacontainer_db.parsers import parse_container_file
 from scidatacontainer_db.utils import MetaDBError
-from . import TESTDIR
+from . import get_example_zdc,\
+              get_example_faulty_zdc,\
+              get_example_faulty_id_zdc,\
+              get_example_replaces_zdc,\
+              get_example_update_zdc,\
+              get_example_version_zdc,\
+              get_example_wo_complete_zdc,\
+              get_example_wo_author_zdc,\
+              testuuid,\
+              TestCase
 
 
 class DataSetTest(TestCase):
@@ -158,65 +167,74 @@ class DataSetTest(TestCase):
         self.assertTrue(dc.is_replaced)
         self.assertEqual(dc.replaced_by, dc2)
 
-    def _create_temp_from_file(self, filename):
-        file_object = open(filename, "rb")
-
-        def getsize(f):
-            f.seek(0)
-            f.read()
-            s = f.tell()
-            f.seek(0)
-            return s
-
-        name = filename.split('/')[-1]
-        content_type, charset = mimetypes.guess_type(name)
-        size = getsize(file_object)
-
-        file = InMemoryUploadedFile(file=file_object, name=name,
-                                    field_name=None, content_type=content_type,
-                                    charset=charset, size=size)
-        return file
-
     def test_dataset_parse_zip_file(self):
         testuser = User.objects.create_user("Testuser")
 
-        file = self._create_temp_from_file(TESTDIR + "example.zdc")
+        container = get_example_zdc()
+        container.hash()
+        file = self._create_temp_from_container(container)
         obj = parse_container_file(file, testuser)
         obj.save()
-        timestamp = datetime(2023, 2, 21,
-                             9, 47, 31).replace(tzinfo=timezone.utc)
-        self.assertEqual(obj.complete, False)
-        self.assertEqual(obj.container_type.name, "myImage")
-        self.assertEqual(obj.created, timestamp)
-        self.assertEqual(obj.hash, "389c050aadb9ea13c488975c035f06ae3b46c92" +
-                                   "b89e69d09a3414958f7521ff9")
-        self.assertEqual(obj.model_version, "1.0.0")
-        self.assertEqual(obj.storage_time, timestamp)
-        self.assertEqual(obj.replaces, None)
-        self.assertEqual(obj.static, False)
-        self.assertEqual(len(obj.used_software.all()), 2)
-        self.assertEqual(obj.id, "a31cb576-494f-40c9-af95-e756271278c3")
 
-        self.assertEqual(obj.author, "Reinhard Caspary")
-        self.assertEqual(obj.comment, "")
-        self.assertEqual(obj.description, "")
+        t = datetime.fromisoformat(container["content.json"]["created"])
+        self.assertEqual(obj.id, container["content.json"]["uuid"])
+        self.assertEqual(obj.id, container["content.json"]["uuid"])
+        self.assertEqual(obj.replaces.id,
+                         container["content.json"]["replaces"])
+        self.assertEqual(obj.container_type.name,
+                         container["content.json"]["containerType"]["name"])
+        self.assertEqual(obj.container_type.id,
+                         container["content.json"]["containerType"]["id"])
+        self.assertEqual(obj.container_type.version,
+                         container["content.json"]["containerType"]["version"])
+        self.assertEqual(obj.created, t)
+        self.assertEqual(obj.storage_time, t)
+        self.assertEqual(obj.static, container["content.json"]["static"])
+        self.assertEqual(obj.complete, container["content.json"]["complete"])
+        self.assertEqual(obj.hash, container["content.json"]["hash"])
+        self.assertEqual(len(obj.used_software.all()),
+                         len(container["content.json"]["usedSoftware"]))
+        for software in container["content.json"]["usedSoftware"]:
+            s_obj = obj.used_software.get(name=software["name"])
+            self.assertEqual(s_obj.version, software["version"])
+            if "id" in software:
+                self.assertEqual(s_obj.id, software["id"])
+                self.assertEqual(s_obj.id_type, software["idType"])
+
+        self.assertEqual(obj.model_version,
+                         container["content.json"]["modelVersion"])
+
+        self.assertEqual(obj.author, container["meta.json"]["author"])
         self.assertEqual(obj.email,
-                         "reinhard.caspary@phoenixd.uni-hannover.de")
-        self.assertEqual(len(obj.keywords.all()), 2)
-        self.assertEqual(obj.title, "This is a sample image dataset")
+                         container["meta.json"]["email"])
+        self.assertEqual(obj.organization,
+                         container["meta.json"]["organization"])
+        self.assertEqual(obj.comment, container["meta.json"]["comment"])
+        self.assertEqual(obj.title, container["meta.json"]["title"])
+        self.assertEqual(len(obj.keywords.all()),
+                         len(container["meta.json"]["keywords"]))
+        for keyword in container["meta.json"]["keywords"]:
+            obj.keywords.get(name=keyword)
+        self.assertEqual(obj.title, container["meta.json"]["title"])
+        self.assertEqual(obj.description,
+                         container["meta.json"]["description"])
+        self.assertEqual(obj.timestamp, t)
+        self.assertEqual(obj.doi,
+                         container["meta.json"]["doi"])
+        self.assertEqual(obj.license,
+                         container["meta.json"]["license"])
 
         # updating dataset
-        file = self._create_temp_from_file(TESTDIR + "example_update.zdc")
+        container2 = get_example_update_zdc()
+        file = self._create_temp_from_container(container2)
         obj = parse_container_file(file, testuser)
         obj.save()
-        self.assertEqual(obj.container_type.name, "myImage2")
-        self.assertEqual(obj.storage_time, timestamp + timedelta(seconds=6))
-        lib1 = obj.used_software.get(name="TestLibrary")
-        lib2 = obj.used_software.get(name="TestLib2")
-        self.assertEqual(lib1.version, "0.2")
-        self.assertEqual(lib2.version, "1.2")
+        self.assertEqual(obj.container_type.name,
+                         container2["content.json"]["containerType"]["name"])
+        self.assertEqual(obj.storage_time, t + timedelta(seconds=1))
 
         id = obj.id
+        obj.replaces.delete()
         obj.delete()
         obj = DataSetBase(id=id)
         obj.save()
@@ -226,38 +244,39 @@ class DataSetTest(TestCase):
         obj = parse_container_file(file, testuser)
         obj.save()
         self.assertTrue(isinstance(obj, DataSet))
+        obj.replaces.delete()
         obj.delete()
 
         # invalid datasets
-        file = self._create_temp_from_file(TESTDIR + "example_wo_complete.zdc")
+        file = self._create_temp_from_container(get_example_wo_complete_zdc())
 
         with self.assertRaisesMessage(MetaDBError,
                                       "{'error_code': 400, 'msg': \""
-                                      "Attribute 'complete' required in " +
+                                      "'complete' is a required property in " +
                                       "content.json.\"}"):
             obj = parse_container_file(file, testuser)
 
-        file = self._create_temp_from_file(TESTDIR + "example_wo_author.zdc")
+        file = self._create_temp_from_container(get_example_wo_author_zdc())
 
         with self.assertRaisesMessage(MetaDBError,
                                       "{'error_code': 400, 'msg': \"" +
-                                      "Attribute 'author' required in" +
+                                      "'author' is a required property in" +
                                       " meta.json.\"}"):
             obj = parse_container_file(file, testuser)
 
-        file = self._create_temp_from_file(TESTDIR + "example_faulty_id.zdc")
+        file = self._create_temp_from_container(get_example_faulty_id_zdc())
         with self.assertRaisesMessage(MetaDBError,
-                                      "{'error_code': 400, 'msg': \"" +
-                                      "ValidationError: ['“" +
-                                      "a31cb576-494f-40c9-af95” is not a " +
-                                      "valid UUID.']\"}"):
+                                      "{'error_code': 400, 'msg': \"Value of" +
+                                      " \'uuid\' in content.json has the " +
+                                      "wrong format: '" + testuuid[:-4] + "'" +
+                                      " is not a 'uuid'.\"}"):
             obj = parse_container_file(file, testuser)
 
-        file = self._create_temp_from_file(TESTDIR + "example_version.zdc")
+        file = self._create_temp_from_container(get_example_version_zdc())
         with self.assertRaisesMessage(MetaDBError,
                                       "{'error_code': 400, 'msg': 'You tried" +
                                       " to upload a dataset complying " +
-                                      "scidatacontainer model version 0.2.19" +
+                                      "scidatacontainer model version 0.2" +
                                       " but the server requires a minimum " +
                                       "model version of 1.0.0'}"):
             obj = parse_container_file(file, testuser)
@@ -268,7 +287,21 @@ class DataSetTest(TestCase):
     def test_dataset_parse_pxd_file(self):
         testuser = User.objects.create_user("Testuser")
 
-        file = self._create_temp_from_file(TESTDIR + "test_file.py")
+        def getsize(f):
+            f.seek(0)
+            f.read()
+            s = f.tell()
+            f.seek(0)
+            return s
+
+        name = "test.py"
+        content = io.BytesIO(b'import numpy as np\nprint("Test")')
+        content_type, charset = mimetypes.guess_type(name)
+        size = getsize(content)
+
+        file = InMemoryUploadedFile(file=content, name=name,
+                                    field_name=None, content_type=content_type,
+                                    charset=charset, size=size)
         with self.assertRaisesMessage(MetaDBError,
                                       "{'error_code': 415, 'msg': 'File " +
                                       "format has to be hdf5 or zip!'}"):
@@ -321,16 +354,18 @@ class DataSetTest(TestCase):
         self.assertTrue(isinstance(dc4.replaces, DataSetBase))
         self.assertFalse(isinstance(dc4.replaces, DataSet))
 
-        file = self._create_temp_from_file(TESTDIR + "example_replaces.zdc")
+        file = self._create_temp_from_container(get_example_replaces_zdc())
         obj = parse_container_file(file, dc.owner)
         obj.save()
         self.assertTrue(isinstance(obj.replaces, DataSetBase))
         self.assertFalse(isinstance(obj.replaces, DataSet))
 
-        file = self._create_temp_from_file(TESTDIR + "example_faulty.zdc")
+        file = self._create_temp_from_container(get_example_faulty_zdc())
+        today = date.today()
         with self.assertRaisesMessage(MetaDBError,
-                                      "{'error_code': 400, 'msg': \"Failed " +
-                                      "to convert '2023-02-21 UTC' using the" +
-                                      " default parser. Make sure it has the" +
-                                      " right type.\"}"):
+                                      "{'error_code': 400, 'msg': \"" +
+                                      "Value of \'storageTime\' in " +
+                                      "content.json has the wrong format: '" +
+                                      str(today) + "' is not a 'date-time'.\"}"
+                                      ):
             obj = parse_container_file(file, dc.owner)

@@ -192,7 +192,8 @@ class DataSetBase(models.Model):
 
     @replaces.setter
     def replaces(self, replaced_object):
-        if replaced_object.is_replaced:
+        if replaced_object.is_replaced and\
+                (replaced_object.replaced_by.id != self.id):
             raise MetaDBError({"error_code": 409,
                                "msg": "Failed to insert replacement " +
                                       "relationship. The object UUID=" +

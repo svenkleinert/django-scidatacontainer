@@ -33,8 +33,10 @@ dependencies = [
     "django-guardian >= 2.4.0",
     "djangorestframework >= 3.14.0",
     "django-rest-knox >= 4.2.0",
+    "h5py >= 3.9.0",
     "packaging >= 23.0",
     "python-magic >= 0.4.27",
+    "iso8601 >= 2.0.0",
     "SciDataContainer >= 1.0.0",
 ]
 

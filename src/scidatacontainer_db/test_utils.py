@@ -1,44 +1,63 @@
+from django.contrib.auth.models import User
 from django.core.exceptions import PermissionDenied
 from django.http import FileResponse
 
 import io
+from uuid import uuid4
 
 from scidatacontainer.tests import get_test_container
 
+from .parsers import BaseParser
+from .serializers import DataSetSerializer
 from .utils import APIResponse, MetaDBError
-from .models import DataSet
 
 
-def parse_test_data(uuid: str):
-    """
-    Check the last characters of a test UUID and raise a corresponding
-    exception.
+class ContainerObjectParser(BaseParser):
+    def _read_content_json(self):
+        # filename is a Container object in this case
+        self.content = self.filename["content.json"]
 
-    :param uuid: UUID as str
+    def _read_meta_json(self):
+        # filename is a Container object in this case
+        self.meta = self.filename["meta.json"]
 
-    :raises scidatacontainer_db.MetaDBError: The exception matching the error
-    code of the last 3 characters of the UUID.
-    """
-    if uuid.endswith("409"):
-        raise MetaDBError({"error_code": 409,
-                           "msg": "Dataset is marked complete. " +
-                                  "No further changes allowed."})
+    def _read_filelist(self):
+        self.filename.size = 42
+        self.files = []
+
+
+def api_detail_test_data(uuid: str, user: User, serializer):
+    if uuid.endswith("204"):
+        return APIResponse(status=204, reason="DataSet was deleted")
+
+    if uuid.endswith("404"):
+        return APIResponse(status=404, reason="No DataSet with UUID=" +
+                                                  uuid + " found!")
+
     if uuid.endswith("403"):
-        raise MetaDBError(
-            {"error_code": 403,
-             "msg": "You don't have permission to update this dataset."})
+        raise PermissionDenied
 
+    container = get_test_container()
+    status_code = 200
     if uuid.endswith("301"):
-        pass
+        container["content.json"]["replaces"] = uuid
+        status_code = 301
 
+    parser = ContainerObjectParser()
+    container["content.json"]["uuid"] = str(uuid4())
+    obj = parser.parse(container, user)
+    obj.doi = "https://example.com/" + uuid
 
-def get_test_data(uuid: str):
-    dc = get_test_container()
+    s = serializer(obj)
 
-    if uuid.endswith("301"):
-        dc.freeze()
-        DataSet(uuid=uuid.uuid4())
-    return
+    r = APIResponse(s.data, status=status_code)
+
+    if obj.replaces:
+        obj.replaces.delete()
+
+    obj.delete()
+
+    return r
 
 
 def download_test_dataset(uuid: str):
@@ -46,8 +65,8 @@ def download_test_dataset(uuid: str):
         return APIResponse("", status=204, reason="DataSet was deleted")
 
     if uuid.endswith("404"):
-        return APIResponse("", status=404, reason="No DataSet with UUID=" +
-                                                  uuid + "found!")
+        return APIResponse('', status=404, reason="No DataSet with UUID=" +
+                                                  uuid + " found!")
 
     if uuid.endswith("403"):
         raise PermissionDenied
