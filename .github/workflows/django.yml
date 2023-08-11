@@ -36,7 +36,7 @@ jobs:
         mkdir data
     - name: Change settings
       run: |
-        echo -e "import datetime\nMEDIA_ROOT='data'\nINSTALLED_APPS += ['scidatacontainer_db', 'drf_spectacular', 'guardian', 'rest_framework', 'knox', 'django_filters']\nAUTHENTICATION_BACKENDS = ('django.contrib.auth.backends.ModelBackend', 'guardian.backends.ObjectPermissionBackend')\nREST_FRAMEWORK = {'DEFAULT_AUTHENTICATION_CLASSES': ['knox.auth.TokenAuthentication', 'rest_framework.authentication.BasicAuthentication', 'rest_framework.authentication.SessionAuthentication',], 'DEFAULT_PERMISSION_CLASSES': ['rest_framework.permissions.IsAuthenticated',]}\nLOGIN_URL = '/login/'\nLOGOUT_REDIRECT_URL = '/'" >> testproject/testproject/settings.py
+        echo -e "import datetime\nMEDIA_ROOT='data'\nINSTALLED_APPS += ['scidatacontainer_db', 'guardian', 'rest_framework', 'knox', 'django_filters']\nAUTHENTICATION_BACKENDS = ('django.contrib.auth.backends.ModelBackend', 'guardian.backends.ObjectPermissionBackend')\nREST_FRAMEWORK = {'DEFAULT_AUTHENTICATION_CLASSES': ['knox.auth.TokenAuthentication', 'rest_framework.authentication.BasicAuthentication', 'rest_framework.authentication.SessionAuthentication',], 'DEFAULT_PERMISSION_CLASSES': ['rest_framework.permissions.IsAuthenticated',]}\nLOGIN_URL = '/login/'\nLOGOUT_REDIRECT_URL = '/'" >> testproject/testproject/settings.py
     - name: Change URLs
       run: |
         echo -e "from django.urls import include\nurlpatterns += [path('', include('scidatacontainer_db.urls'))]" >> testproject/testproject/urls.py
