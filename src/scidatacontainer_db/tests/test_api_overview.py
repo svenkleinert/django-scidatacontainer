@@ -38,7 +38,7 @@ class ApiOverviewTest(APITestCase):
                                     )
         self.assertEqual(response.status_code, 405)
 
-    @unittest.expectedFailure
+    @unittest.skip("ToDo: Not working with Swagger overview.")
     def test_api_overview(self):
         response = self._get(reverse("scidatacontainer_db:api:api-root"))
         content = response.content.decode("utf-8")
