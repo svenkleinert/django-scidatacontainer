@@ -1,6 +1,8 @@
 # SciDataContainer Django Server
 
 [![Documentation Status](https://readthedocs.org/projects/django-scidatacontainer/badge/?version=latest)](https://django-scidatacontainer.readthedocs.io/en/latest/?badge=latest)
+[![Django CI](https://github.com/svenkleinert/django-scidatacontainer/actions/workflows/django.yml/badge.svg)](https://github.com/svenkleinert/django-scidatacontainer/actions/workflows/django.yml)
+[![codecov](https://codecov.io/gh/svenkleinert/django-scidatacontainer/graph/badge.svg?token=GMZIV7NKAF)](https://codecov.io/gh/svenkleinert/django-scidatacontainer)
 
 This is the django based implementation of the server to manage [`SciDataContainer`](https://pypi.org/project/scidatacontainer/) objects.
 
