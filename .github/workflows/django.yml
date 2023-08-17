@@ -44,18 +44,3 @@ jobs:
     - name: Run Tests
       run: |
         python testproject/manage.py test scidatacontainer_db
-    - name: Create coverage report
-      run: |
-        coverage run --source=scidatacontainer_db testproject/manage.py test scidatacontainer_db
-        coverage xml
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
-        directory: ./coverage/reports/
-        env_vars: OS,PYTHON
-        files: ./coverage.xml
-        fail_ci_if_error: true
-        flags: unittests
-        name: codecov-umbrella
-        verbose: true
