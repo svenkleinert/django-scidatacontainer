@@ -1,0 +1,58 @@
+name: Codecov
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    strategy:
+      max-parallel: 4
+      matrix:
+        python-version: ["3.8"]
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v3
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install coverage
+        pip install -r requirements.txt
+    - name: Install library
+      run: |
+        pip install .
+    - name: Create django project
+      run: |
+        django-admin startproject testproject
+    - name: Create data directory
+      run: |
+        mkdir data
+    - name: Change settings
+      run: |
+        echo -e "import datetime\nMEDIA_ROOT='data'\nINSTALLED_APPS += ['scidatacontainer_db', 'guardian', 'rest_framework', 'knox', 'django_filters']\nAUTHENTICATION_BACKENDS = ('django.contrib.auth.backends.ModelBackend', 'guardian.backends.ObjectPermissionBackend')\nREST_FRAMEWORK = {'DEFAULT_AUTHENTICATION_CLASSES': ['knox.auth.TokenAuthentication', 'rest_framework.authentication.BasicAuthentication', 'rest_framework.authentication.SessionAuthentication',], 'DEFAULT_PERMISSION_CLASSES': ['rest_framework.permissions.IsAuthenticated',]}\nLOGIN_URL = '/login/'\nLOGOUT_REDIRECT_URL = '/'" >> testproject/testproject/settings.py
+    - name: Change URLs
+      run: |
+        echo -e "from django.urls import include\nurlpatterns += [path('', include('scidatacontainer_db.urls'))]" >> testproject/testproject/urls.py
+    - name: Create coverage report
+      run: |
+        coverage run --source=scidatacontainer_db testproject/manage.py test scidatacontainer_db
+        coverage xml
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        directory: ./coverage/reports/
+        env_vars: OS,PYTHON
+        files: ./coverage.xml
+        fail_ci_if_error: true
+        flags: unittests
+        name: codecov-umbrella
+        verbose: true
